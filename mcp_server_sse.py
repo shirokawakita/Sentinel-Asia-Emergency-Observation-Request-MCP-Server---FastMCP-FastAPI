@@ -138,30 +138,68 @@ async def get_products(
     return await make_api_request("get_products", params)
 
 if __name__ == "__main__":
-    # Render用の環境変数設定
+    # Render用の環境変数を強制設定
     port = int(os.environ.get("PORT", 8000))
-    host = "0.0.0.0"  # Render用に0.0.0.0にバインド
     
     print(f"Starting Sentinel Asia EOR MCP Server with SSE transport...")
-    print(f"Server will bind to {host}:{port}")
+    print(f"Target host: 0.0.0.0, port: {port}")
     
-    # FastMCPのSSEアプリを取得してuvicornで直接起動
+    # FastMCPが使用する環境変数を強制設定
+    original_host = os.environ.get("HOST")
+    original_port = os.environ.get("PORT")
+    
     try:
-        # FastMCPの内部SSEアプリを取得
-        app = mcp._create_sse_app()
-        
-        # uvicornで直接起動（host設定を確実に適用）
-        uvicorn.run(
-            app,
-            host=host,
-            port=port,
-            log_level="info"
-        )
-    except Exception as e:
-        print(f"Error starting server with direct uvicorn: {e}")
-        print("Trying alternative method...")
-        
-        # 代替方法：環境変数を設定してからFastMCPを起動
-        os.environ["HOST"] = host
+        # 環境変数でホストとポートを強制設定
+        os.environ["HOST"] = "0.0.0.0"
         os.environ["PORT"] = str(port)
-        mcp.run(transport="sse") 
+        
+        print("Environment variables set:")
+        print(f"  HOST={os.environ.get('HOST')}")
+        print(f"  PORT={os.environ.get('PORT')}")
+        
+        # FastMCPでSSEサーバーを起動
+        print("Starting FastMCP server...")
+        mcp.run(transport="sse")
+        
+    except Exception as e:
+        print(f"Error with FastMCP: {e}")
+        print("Attempting direct uvicorn approach...")
+        
+        # 代替案：FastAPIとして直接実行
+        try:
+            from fastapi import FastAPI
+            from fastapi.responses import JSONResponse
+            from starlette.middleware.cors import CORSMiddleware
+            
+            app = FastAPI(title="Sentinel Asia EOR MCP Server")
+            
+            app.add_middleware(
+                CORSMiddleware,
+                allow_origins=["*"],
+                allow_credentials=True,
+                allow_methods=["*"],
+                allow_headers=["*"],
+            )
+            
+            @app.get("/")
+            async def root():
+                return {"message": "Sentinel Asia EOR MCP Server", "status": "running"}
+            
+            @app.get("/health")
+            async def health():
+                return {"status": "healthy"}
+            
+            uvicorn.run(app, host="0.0.0.0", port=port)
+            
+        except Exception as fallback_error:
+            print(f"Fallback also failed: {fallback_error}")
+            
+    finally:
+        # 環境変数を元に戻す
+        if original_host is not None:
+            os.environ["HOST"] = original_host
+        elif "HOST" in os.environ:
+            del os.environ["HOST"]
+            
+        if original_port is not None:
+            os.environ["PORT"] = original_port 

@@ -137,7 +137,11 @@ async def get_products(
     return await make_api_request("get_products", params)
 
 if __name__ == "__main__":
-    # SSEトランスポートでMCPサーバーを起動（Render対応）
+    # Render用の環境変数設定
+    port = int(os.environ.get("PORT", 8000))
+    
     print("Starting Sentinel Asia EOR MCP Server with SSE transport...")
-    print(f"Server will run on port {os.environ.get('PORT', '8000')}")
-    mcp.run(transport="sse") 
+    print(f"Server will bind to 0.0.0.0:{port}")
+    
+    # SSEトランスポートでMCPサーバーを起動（Render対応 - 0.0.0.0にバインド）
+    mcp.run(transport="sse", host="0.0.0.0", port=port) 

@@ -1,109 +1,96 @@
-# Sentinel Asia EOR MCP Server
+# Sentinel Asia Emergency Observation Request MCP Server
 
-Sentinel Asia緊急観測要請（EOR: Emergency Observation Request）の**真のMCPサーバー**です。FastMCPを使用してSSE（Server-Sent Events）トランスポートで実装されており、Claude DesktopからMCPプロトコル経由で直接アクセス可能です。
+**Sentinel Asia緊急観測要請（EOR）APIのModel Context Protocol（MCP）サーバー**
 
-## 🌐 MCPサーバー
+このプロジェクトは、[Sentinel Asia](https://sentinel-asia.org/)の緊急観測要請（Emergency Observation Request, EOR）APIをModel Context Protocol (MCP)経由でアクセスできるようにするサーバーです。
 
-- **プロトコル**: MCP over SSE（Server-Sent Events）
-- **元データソース**: [Sentinel Asia EOR API](https://reder-test-o5k8.onrender.com)
-- **Claude連携**: 直接MCP接続可能
+## 🚀 **主な機能**
 
-## 🚀 Renderでのデプロイ
+- **災害イベント検索**: 国別・日付別での災害イベント情報取得
+- **国リスト取得**: アジア太平洋地域の対応国一覧
+- **メタデータ取得**: サービス情報・ライセンス・注意事項
+- **成果物取得**: EOR詳細ページから関連成果物情報を取得
 
-### 1. このリポジトリをフォーク
-### 2. Renderアカウント作成
-1. [Render](https://render.com)にサインアップ
-2. "New" → "Web Service"
-3. GitHubリポジトリを接続
+## 🛠️ **MCPツール一覧**
 
-### 3. デプロイ設定（MCP版）
+### `get_countries()`
+- アジア、中東、太平洋諸国の国名とISO3コードのリストを取得
+
+### `get_metadata()`
+- サービスの説明、ライセンス、方法論、注意事項を取得
+
+### `get_events(countryiso3s?, start_date?, end_date?)`
+- 災害イベント情報を取得
+- **パラメータ**:
+  - `countryiso3s`: カンマ区切りのISO3国コード（例：JPN,PHL,CHN）
+  - `start_date`: 開始日（YYYYMMDD または YYYY-MM-DD 形式）
+  - `end_date`: 終了日（YYYYMMDD または YYYY-MM-DD 形式）
+
+### `get_products(url)`
+- 指定されたEOR詳細ページから成果物情報を取得
+- **パラメータ**:
+  - `url`: EOR詳細ページのURL
+
+## 🌐 **Renderでのデプロイ**
+
+### デプロイ設定
+
+**Build Command:**
+```bash
+pip install -r requirements_mcp.txt
 ```
-Build Command: pip install -r requirements_mcp.txt
-Start Command: python mcp_server_sse.py
+
+**Start Command:**
+```bash
+python mcp_server_sse.py
 ```
 
-### 4. 環境変数
-特に設定不要（PORTは自動設定）
+### 環境変数
+- `PORT`: Renderが自動設定（通常10000）
 
-## 🔧 Claude Desktop設定
+## 🔧 **Claude Desktopでの使用**
 
-デプロイ完了後、ClaudeのMCP設定に追加：
+`claude_desktop_config.json`に以下を追加：
 
 ```json
 {
   "mcpServers": {
     "sentinel-asia-eor": {
       "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-fetch", "https://your-app.onrender.com"],
+      "args": ["-y", "@modelcontextprotocol/server-fetch", "https://your-app.onrender.com/sse"],
       "env": {}
     }
   }
 }
 ```
 
-**your-app.onrender.com** を実際のRender URLに置き換えてください。
+## 📚 **使用例**
 
-## 🛠️ 利用可能なMCPツール
-
-Claude Desktopから以下のツールが利用可能：
-
-- **`get_countries`** - 利用可能国リスト取得
-- **`get_metadata`** - サービスメタデータ取得  
-- **`get_events`** - 災害イベント検索・フィルタリング
-- **`get_products`** - 成果物情報取得
-
-### ツール使用例
-
+### 日本の2024年災害イベントを検索
 ```
-# Claude Desktop内で直接利用
-"日本の2024年の災害イベントを検索して"
-→ get_events(countryiso3s="JPN", start_date="20240101") が実行
-
-"利用可能な国を教えて"  
-→ get_countries() が実行
+get_events(countryiso3s="JPN", start_date="20240101", end_date="20241231")
 ```
 
-## 💻 ローカル開発
-
-```bash
-# 依存関係インストール
-pip install -r requirements_mcp.txt
-
-# MCPサーバー起動（stdio）
-python mcp_server_sse.py
-
-# テスト（別ターミナル）
-npx @modelcontextprotocol/inspector
+### フィリピンの最近の災害イベントを検索
+```
+get_events(countryiso3s="PHL", start_date="20241201")
 ```
 
-## 🌏 対象地域
+### 利用可能な国一覧を取得
+```
+get_countries()
+```
 
-アジア・太平洋・中東地域の緊急観測要請情報：
-- 日本、フィリピン、中国、インド、インドネシア、イラン等
-- 自然災害（地震、津波、洪水、台風等）の衛星観測データ
-- 各EORの詳細情報とKMZファイルアクセス
+## 🔗 **関連リンク**
 
-## 🔄 MCPプロトコルの利点
+- [Sentinel Asia 公式サイト](https://sentinel-asia.org/)
+- [Model Context Protocol](https://modelcontextprotocol.io/)
+- [FastMCP Documentation](https://github.com/jlowin/fastmcp)
 
-- **自動ツール認識**: Claudeが自動的にツールを理解
-- **型安全**: Pydanticベースの厳密な型チェック
-- **非同期処理**: 高速なAPI呼び出し
-- **エラーハンドリング**: 適切なエラー処理とメッセージ
+## 📄 **ライセンス**
 
-## 📄 ライセンス
+このプロジェクトはMITライセンスの下で公開されています。
 
-このプロジェクトはMITライセンスです。取得されるデータはSentinel Asiaの利用規約に従います。
+## 🙏 **謝辞**
 
-## 🔗 関連リンク
-
-- [Sentinel Asia EOR API](https://github.com/shirokawakita/reder_test)
-- [Sentinel Asia 公式サイト](https://sentinel.tksc.jaxa.jp/)
-- [MCP Protocol](https://modelcontextprotocol.io/)
-- [FastMCP](https://github.com/jlowin/fastmcp)
-
----
-
-**注意**: 
-- 無料プランでは15分で自動スリープします
-- 本格利用には有料プランを推奨
-- MCPサーバーの初回起動時はコールドスタートにより数秒かかります 
+このプロジェクトは[Sentinel Asia](https://sentinel-asia.org/)のAPIを使用しています。災害監視・対応における貴重なデータを提供いただき、ありがとうございます。 

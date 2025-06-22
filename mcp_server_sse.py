@@ -7,6 +7,7 @@ Sentinel Asia緊急観測要請（EOR）APIのMCPサーバー - SSE版（Render�
 import asyncio
 import httpx
 import os
+import uvicorn
 from typing import Dict, List, Optional, Any
 from fastmcp import FastMCP
 from pydantic import BaseModel, Field
@@ -139,9 +140,28 @@ async def get_products(
 if __name__ == "__main__":
     # Render用の環境変数設定
     port = int(os.environ.get("PORT", 8000))
+    host = "0.0.0.0"  # Render用に0.0.0.0にバインド
     
-    print("Starting Sentinel Asia EOR MCP Server with SSE transport...")
-    print(f"Server will bind to 0.0.0.0:{port}")
+    print(f"Starting Sentinel Asia EOR MCP Server with SSE transport...")
+    print(f"Server will bind to {host}:{port}")
     
-    # SSEトランスポートでMCPサーバーを起動（Render対応 - 0.0.0.0にバインド）
-    mcp.run(transport="sse", host="0.0.0.0", port=port) 
+    # FastMCPのSSEアプリを取得してuvicornで直接起動
+    try:
+        # FastMCPの内部SSEアプリを取得
+        app = mcp._create_sse_app()
+        
+        # uvicornで直接起動（host設定を確実に適用）
+        uvicorn.run(
+            app,
+            host=host,
+            port=port,
+            log_level="info"
+        )
+    except Exception as e:
+        print(f"Error starting server with direct uvicorn: {e}")
+        print("Trying alternative method...")
+        
+        # 代替方法：環境変数を設定してからFastMCPを起動
+        os.environ["HOST"] = host
+        os.environ["PORT"] = str(port)
+        mcp.run(transport="sse") 

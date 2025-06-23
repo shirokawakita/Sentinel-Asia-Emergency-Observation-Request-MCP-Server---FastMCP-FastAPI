@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-MCP Server for Sentinel Asia Emergency Observation Request (EOR) API
-Sentinel Asia緊急観測要請（EOR）APIのMCPサーバー
+MCP Proxy Server for Sentinel Asia API
+RenderでホストされているAPIにアクセスするためのstdio MCPプロキシサーバー
 """
 
 import asyncio
@@ -14,45 +14,14 @@ from pydantic import BaseModel, Field
 # API設定
 API_BASE_URL = "https://reder-test-o5k8.onrender.com"
 
-# レスポンスモデル
-class CountryInfo(BaseModel):
-    name: str
-    iso3: str
-
-class MetadataResponse(BaseModel):
-    description: str
-    licence: str
-    methodology: str
-    caveats: str
-
-class EventInfo(BaseModel):
-    name: str
-    description: Optional[str] = None
-    disaster_type: Optional[str] = None
-    country: Optional[str] = None
-    country_iso3: Optional[str] = None
-    occurrence_date: Optional[str] = None
-    sa_activation_date: Optional[str] = None
-    requester: Optional[str] = None
-    escalation_to_charter: Optional[str] = None
-    glide_number: Optional[str] = None
-    url: str
-
-class ProductInfo(BaseModel):
-    date: Optional[str] = None
-    title: Optional[str] = None
-    download_url: str
-    view_url: Optional[str] = None
-    file_type: Optional[str] = None
-
 # MCPサーバーの初期化
-mcp = FastMCP("Sentinel Asia EOR API Server")
+mcp = FastMCP("Sentinel Asia EOR API Proxy Server")
 
 async def make_api_request(
     endpoint: str, 
     params: Optional[Dict[str, str]] = None
 ) -> Any:
-    """APIリクエストを実行する共通関数"""
+    """RenderのAPIにリクエストを送信する関数"""
     async with httpx.AsyncClient() as client:
         try:
             response = await client.get(
@@ -138,11 +107,11 @@ async def get_products(
 
 if __name__ == "__main__":
     # デバッグ出力
-    print("Starting Sentinel Asia EOR MCP Server...", file=sys.stderr)
+    print("Starting Sentinel Asia EOR MCP Proxy Server...", file=sys.stderr)
     
     try:
-        # FastMCPサーバーを起動（stdio transport）
+        # stdio transport でMCPサーバーを起動
         mcp.run()
     except Exception as e:
-        print(f"Error starting MCP server: {e}", file=sys.stderr)
+        print(f"Error starting MCP proxy server: {e}", file=sys.stderr)
         sys.exit(1) 

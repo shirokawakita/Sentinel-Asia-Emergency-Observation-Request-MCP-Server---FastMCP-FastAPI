@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """
-MCP Server for Sentinel Asia Emergency Observation Request (EOR) API
-Sentinel Asia緊急観測要請（EOR）APIのMCPサーバー
+Render-compatible MCP Server for Sentinel Asia EOR API
+Sentinel Asia緊急観測要請（EOR）APIのMCPサーバー（Render対応版）
 """
 
+import os
+import sys
 import asyncio
 import httpx
-import sys
 from typing import Dict, List, Optional, Any
 from fastmcp import FastMCP
 from pydantic import BaseModel, Field
@@ -137,12 +138,15 @@ async def get_products(
     return await make_api_request("get_products", params)
 
 if __name__ == "__main__":
-    # デバッグ出力
-    print("Starting Sentinel Asia EOR MCP Server...", file=sys.stderr)
+    # Render環境での実行
+    port = int(os.environ.get("PORT", 8000))
+    host = "0.0.0.0"
+    
+    print(f"Starting Sentinel Asia EOR MCP Server on {host}:{port}...", file=sys.stderr)
     
     try:
-        # FastMCPサーバーを起動（stdio transport）
-        mcp.run()
+        # SSEトランスポートでMCPサーバーを起動
+        mcp.run(transport="sse", host=host, port=port)
     except Exception as e:
         print(f"Error starting MCP server: {e}", file=sys.stderr)
         sys.exit(1) 
